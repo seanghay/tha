@@ -11,6 +11,7 @@ import tha.ordinals
 import tha.currency
 import tha.parenthesis
 import tha.repeater
+import tha.punctuations
 
 ## Normalize
 assert tha.normalize.processor("មិន\u200bឲ្យ") == "មិនឱ្យ"
@@ -99,3 +100,7 @@ assert (
   tha.repeater.processor("គាត់បានទៅបន្តិចម្ដងៗហើយ", tokenizer=fake_tokenizer)
   == "គាត់បានទៅបន្តិចម្ដង▁បន្តិចម្ដងហើយ"
 )
+
+## Punctuations
+src_text = 'hello world "test test test"valuevalue"test test test" ។valuevalueaaa'
+assert "".join(list(tha.punctuations.processor(src_text))) == src_text
