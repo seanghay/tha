@@ -3,7 +3,14 @@
 Khmer Text Normalization and Verbalization Toolkit.
 
 
+## Install
+
+```shell
+pip install tha
+```
+
 ```python
+import tha.normalize
 import tha.phone_numbers
 import tha.urls
 import tha.datetime
@@ -15,6 +22,10 @@ import tha.decimals
 import tha.ordinals
 import tha.currency
 import tha.parenthesis
+import tha.repeater
+
+## Normalize
+assert tha.normalize.processor("មិន\u200bឲ្យ") == "មិនឱ្យ"
 
 ## Phone Numbers
 assert tha.phone_numbers.processor("010123123", chunk_size=2) == "0▁10▁12▁31▁23"
@@ -89,4 +100,15 @@ assert tha.currency.processor("100.0032៛") == "មួយរយ▁ចុច▁�
 
 ## Parenthesis
 assert tha.parenthesis.processor("Hello (this will be ignored) world") == "Hello world"
+
+
+## Iteration Mark
+def fake_tokenizer(_):
+  return ["គាត់", "បាន", "ទៅ", "បន្តិច", "ម្ដង"]
+
+
+assert (
+  tha.repeater.processor("គាត់បានទៅបន្តិចម្ដងៗហើយ", tokenizer=fake_tokenizer)
+  == "គាត់បានទៅបន្តិចម្ដង▁បន្តិចម្ដងហើយ"
+)
 ```
