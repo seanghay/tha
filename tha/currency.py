@@ -7,7 +7,7 @@ from tha.verbatim import verbatim_dict
 verbtim_translator = str.maketrans(verbatim_dict)
 
 RE_NUM_CURRENCY = re.compile(
-  r"([\$€£៛₫₽¥₩฿₭])\s?([\d\u17e0-\u17e9]+\.?[\d\u17e0-\u17e9]*)"
+  r"([\$€£៛₫₽¥₩฿₭])\s?([\d\u17e0-\u17e9]+\.?[\d\u17e0-\u17e9]*)|([\d\u17e0-\u17e9]+\.?[\d\u17e0-\u17e9]*)\s?([\$€£៛₫₽¥₩฿₭])"
 )
 
 RE_MONEY_LEADING_ZEROS = re.compile(r"^[0\u17e0]+")
@@ -17,8 +17,14 @@ RE_MONEY_USD_DECIMAL = re.compile(
 
 
 def reoder(text: str) -> str:
-  return RE_NUM_CURRENCY.sub(r"\2▁\1", text)
-
+  def replacer(m):
+    n = m[2]
+    s = m[1]
+    if m[3] and m[4]:
+      n = m[3]
+      s = m[4]
+    return f"{n}▁{s}".translate(verbtim_translator)
+  return RE_NUM_CURRENCY.sub(replacer, text)
 
 def currency_usd(
   text: str, currency_text="ដុល្លារ", cent_text="សេន", separator="▁"
@@ -60,4 +66,4 @@ def processor(text: str):
   text = reoder(text)
   text = decimals_processor(text)
   text = cardi_processor(text)
-  return text.translate(verbtim_translator)
+  return text

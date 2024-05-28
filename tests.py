@@ -87,10 +87,11 @@ assert tha.ordinals.processor("10") == "10"
 ## Number - Currency
 assert tha.currency.processor("$100.01") == "មួយរយដុល្លារ▁មួយសេន"
 assert tha.currency.processor("$100") == "មួយរយ▁ដុល្លារ"
-assert tha.currency.processor("100$") == "មួយរយដុល្លារ"
-assert tha.currency.processor("100៛") == "មួយរយរៀល"
-assert tha.currency.processor("100.32៛") == "មួយរយ▁ចុច▁សាមសិបពីររៀល"
-assert tha.currency.processor("100.0032៛") == "មួយរយ▁ចុច▁សូន្យ▁សូន្យ▁សាមសិបពីររៀល"
+assert tha.currency.processor("100$") == "មួយរយ▁ដុល្លារ"
+assert tha.currency.processor("100៛") == "មួយរយ▁រៀល"
+assert tha.currency.processor("100.32៛") == "មួយរយចុចសាមសិបពីរ▁រៀល"
+assert tha.currency.processor("100.0032៛") == "មួយរយចុចសាមសិបពីរ▁រៀល"
+assert tha.currency.processor("asdasdas.asdas,d 100.0032៛") == "asdasdas.asdas,d មួយរយចុចសាមសិបពីរ▁រៀល"
 
 ## Parenthesis
 assert tha.parenthesis.processor("Hello (this will be ignored) world") == "Hello world"

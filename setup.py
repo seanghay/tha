@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
   name="tha",
-  version="0.1.1",
+  version="0.1.2",
   description="A Khmer Text Normalization and Verbalization Toolkit.",
   long_description=long_description,
   long_description_content_type="text/markdown",
@@ -20,6 +20,7 @@ setuptools.setup(
     "Natural Language :: English",
   ],
   python_requires=">3.5",
+  packages=setuptools.find_packages(),
   package_dir={"tha": "tha"},
   install_requires=[
     "urlextract",

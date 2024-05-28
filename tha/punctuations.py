@@ -10,7 +10,7 @@ def split_on_punctuations(text: str):
     return values
   return values[:-1]
 
-def processor(text: str) -> str:
+def processor(text: str):
   sentences = []
   for line in text.splitlines():
     line = line.strip()
@@ -20,3 +20,4 @@ def processor(text: str) -> str:
     for sentence in split_on_punctuations(line):
       sentences.append(sentence)
   return sentences
+
