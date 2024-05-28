@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
   name="tha",
-  version="0.1.2",
+  version="0.1.3",
   description="A Khmer Text Normalization and Verbalization Toolkit.",
   long_description=long_description,
   long_description_content_type="text/markdown",
