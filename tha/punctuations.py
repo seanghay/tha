@@ -1,13 +1,22 @@
 import regex as re
 
-RE_ENCLOSED_QUOUTING = re.compile(r'«[^»]+» *[។៕]?|"[^"]+" *[។៕]?|“[^”]+” *[។៕]?')
+SENTENCE_SEPARATOR = ["។", "៕", "?", "!"]
+RE_SENTENCE_SEPARATOR = re.compile("(?<=[" + "".join(SENTENCE_SEPARATOR) + "])")
+RE_REPEATING_PUNCT = re.compile(r"([?!៕។៖]){2,}")
 
+def split_on_punctuations(text: str):
+  values = RE_SENTENCE_SEPARATOR.split(text)
+  if values[-1]:
+    return values
+  return values[:-1]
 
-def processor(text: str):
-  offset = 0
-  for m in RE_ENCLOSED_QUOUTING.finditer(text):
-    yield text[offset : m.start()]
-    yield text[m.start() : m.end()]
-    offset = m.end()
-  if offset < len(text):
-    yield text[offset:]
+def processor(text: str) -> str:
+  sentences = []
+  for line in text.splitlines():
+    line = line.strip()
+    if not line:
+      continue
+    line = RE_REPEATING_PUNCT.sub(r"\1", line)
+    for sentence in split_on_punctuations(line):
+      sentences.append(sentence)
+  return sentences

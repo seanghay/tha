@@ -11,6 +11,7 @@ import tha.ordinals
 import tha.currency
 import tha.parenthesis
 import tha.repeater
+import tha.quotings
 import tha.punctuations
 
 ## Normalize
@@ -71,7 +72,10 @@ assert tha.decimals.processor("123.324") == "មួយរយ▁ម្ភៃប�
 assert tha.decimals.processor("123.001") == "មួយរយ▁ម្ភៃបី▁ចុច▁សូន្យ▁សូន្យ▁មួយ"
 assert tha.decimals.processor("-123.0012") == "ដក▁មួយរយ▁ម្ភៃបី▁ចុច▁សូន្យ▁សូន្យ▁ដប់ពីរ"
 assert tha.decimals.processor("-123,0012") == "ដក▁មួយរយ▁ម្ភៃបី▁ក្បៀស▁សូន្យ▁សូន្យ▁ដប់ពីរ"
-assert tha.decimals.processor("hello, world -123,0012") == "hello, world ដក▁មួយរយ▁ម្ភៃបី▁ក្បៀស▁សូន្យ▁សូន្យ▁ដប់ពីរ"
+assert (
+  tha.decimals.processor("hello, world -123,0012")
+  == "hello, world ដក▁មួយរយ▁ម្ភៃបី▁ក្បៀស▁សូន្យ▁សូន្យ▁ដប់ពីរ"
+)
 
 ## Number - Ordinals
 assert tha.ordinals.processor("5th") == "ទី▁ប្រាំ"
@@ -102,6 +106,17 @@ assert (
   == "គាត់បានទៅបន្តិចម្ដង▁បន្តិចម្ដងហើយ"
 )
 
+## Quotes
+assert tha.quotings.processor('lorem "content" lorem') == "lorem content lorem"
+
 ## Punctuations
-src_text = 'hello world "test test test"valuevalue"test test test" ។valuevalueaaa'
-assert "".join(list(tha.punctuations.processor(src_text))) == src_text
+assert (
+  "".join(
+    list(
+      tha.punctuations.processor(
+        'hello world "test test test"valuevalue"test test test"។។។។ valuevalueaaa'
+      )
+    )
+  )
+  == 'hello world "test test test"valuevalue"test test test"។ valuevalueaaa'
+)
