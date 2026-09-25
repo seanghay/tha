@@ -1,0 +1,38 @@
+[project]
+name = "tha"
+version = "0.1.4"
+description = "A Khmer Text Normalization and Verbalization Toolkit."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Seanghay Yath", email = "seanghay.dev@gmail.com" }]
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+]
+dependencies = [
+  "pynini",
+  "khmercut",
+  # khmercut.nn needs these but doesn't declare them
+  "onnxruntime",
+  "numpy",
+  "regex",
+  "ftfy",
+]
+
+[project.urls]
+Homepage = "https://github.com/seanghay/tha"
+
+[dependency-groups]
+dev = ["ruff"]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# the package lives at ./tha, not ./src/tha
+module-root = ""

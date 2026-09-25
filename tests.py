@@ -1,43 +1,374 @@
+import tha
 import tha.normalize
-import tha.phone_numbers
-import tha.urls
-import tha.datetime
 import tha.hashtags
 import tha.ascii_lines
-import tha.license_plate
-import tha.cardinals
-import tha.decimals
-import tha.ordinals
-import tha.currency
 import tha.parenthesis
 import tha.repeater
 import tha.quotings
 import tha.punctuations
 
+## Verbalization (WFST)
+normalizer = tha.Normalizer()
+
+CASES = [
+  # cardinals
+  ("1234", "មួយពាន់▁ពីររយ▁សាមសិបបួន"),
+  ("0", "សូន្យ"),
+  ("15", "ដប់ប្រាំ"),
+  ("10100", "មួយម៉ឺន▁មួយរយ"),
+  ("1000050", "មួយលាន▁ហាសិប"),
+  ("10000000", "ដប់លាន"),
+  ("2000000000", "ពីរប៊ីលាន"),
+  ("1,000,000", "មួយលាន"),
+  ("១២៣", "មួយរយ▁ម្ភៃបី"),
+  ("007", "សូន្យ▁សូន្យ▁ប្រាំពីរ"),
+  (
+    "1234567890123456",
+    "មួយ▁ពីរ▁បី▁បួន▁ប្រាំ▁ប្រាំមួយ▁ប្រាំពីរ▁ប្រាំបី▁ប្រាំបួន▁សូន្យ▁មួយ▁ពីរ▁បី▁បួន▁ប្រាំ▁ប្រាំមួយ",
+  ),
+  ("-1", "ដក▁មួយ"),
+  ("(-5)", "(ដក▁ប្រាំ)"),
+  ("2-3", "ពីរ▁ដល់▁បី"),
+  ("COVID-19", "កូវីដ▁ដប់ប្រាំបួន"),
+  ("SARS-2", "SARS▁ពីរ"),
+  ("ឆ្នាំ២០២៤", "ឆ្នាំពីរពាន់▁ម្ភៃបួន"),
+  # decimals
+  ("123.324", "មួយសែន▁ពីរម៉ឺន▁បីពាន់▁បីរយ▁ម្ភៃបួន"),
+  ("12.5", "ដប់ពីរ▁ចុច▁ប្រាំ"),
+  ("0.001", "សូន្យ▁ចុច▁សូន្យ▁សូន្យ▁មួយ"),
+  ("-123,0012", "ដក▁មួយរយ▁ម្ភៃបី▁ក្បៀស▁សូន្យ▁សូន្យ▁ដប់ពីរ"),
+  ("1,000.50", "មួយពាន់▁ចុច▁ហាសិប"),
+  ("1,5", "មួយ▁ក្បៀស▁ប្រាំ"),
+  ("0.0", "សូន្យ▁ចុច▁សូន្យ"),
+  # serials: versions, IPs, lists
+  ("3.14.15", "បី▁ចុច▁ដប់បួន▁ចុច▁ដប់ប្រាំ"),
+  ("1,2,3", "មួយ,ពីរ,បី"),
+  # ordinals
+  ("1st", "ទី▁មួយ"),
+  ("21ST", "ទី▁ម្ភៃមួយ"),
+  ("5th.", "ទី▁ប្រាំ."),
+  ("1stly", "មួយstly"),
+  # money
+  ("$100", "មួយរយ▁ដុល្លារ"),
+  ("100$", "មួយរយ▁ដុល្លារ"),
+  ("$100.01", "មួយរយ▁ដុល្លារ▁មួយ▁សេន"),
+  ("$1.5", "មួយ▁ដុល្លារ▁ហាសិប▁សេន"),
+  ("$0.50", "ហាសិប▁សេន"),
+  ("$1.00", "មួយ▁ដុល្លារ"),
+  ("$0.00", "សូន្យ▁ដុល្លារ"),
+  ("$1,000", "មួយពាន់▁ដុល្លារ"),
+  ("$1.999", "មួយពាន់▁ប្រាំបួនរយ▁កៅសិបប្រាំបួន▁ដុល្លារ"),
+  ("$1.9999", "មួយ▁ចុច▁ប្រាំបួនពាន់▁ប្រាំបួនរយ▁កៅសិបប្រាំបួន▁ដុល្លារ"),
+  ("-$5", "ដក▁ប្រាំ▁ដុល្លារ"),
+  ("100៛", "មួយរយ▁រៀល"),
+  ("100,000៛", "មួយសែន▁រៀល"),
+  ("100.0032៛", "មួយរយ▁ចុច▁សូន្យ▁សូន្យ▁សាមសិបពីរ▁រៀល"),
+  ("USD 100", "មួយរយ▁ដុល្លារ"),
+  ("100 KHR", "មួយរយ▁រៀល"),
+  ("EUR 50", "ហាសិប▁អឺរ៉ូ"),
+  # measures and percentages
+  ("50%", "ហាសិប▁ភាគរយ"),
+  ("12.5 %", "ដប់ពីរ▁ចុច▁ប្រាំ▁ភាគរយ"),
+  ("5km", "ប្រាំ▁គីឡូម៉ែត្រ"),
+  ("10 km/h", "ដប់▁គីឡូម៉ែត្រក្នុងមួយម៉ោង"),
+  ("−3.5°C", "ដក▁បី▁ចុច▁ប្រាំ▁អង្សាសេ"),
+  ("5 mango", "ប្រាំ mango"),
+  ("3 ms", "បី ms"),
+  # time
+  ("10:23", "ម៉ោង▁ដប់▁ម្ភៃបី▁នាទី"),
+  ("10:00", "ម៉ោង▁ដប់"),
+  ("10:23:45", "ម៉ោង▁ដប់▁ម្ភៃបី▁នាទី▁សែសិបប្រាំ▁វិនាទី"),
+  ("10:23 a.m.", "ម៉ោង▁ដប់▁ម្ភៃបី▁នាទី▁ព្រឹក"),
+  ("9:05pm", "ម៉ោង▁ប្រាំបួន▁ប្រាំ▁នាទី▁យប់"),
+  ("12:30 PM", "ម៉ោង▁ដប់ពីរ▁សាមសិប▁នាទី▁ថ្ងៃត្រង់"),
+  ("5pm", "ម៉ោង▁ប្រាំ▁ល្ងាច"),
+  ("១០:៣០", "ម៉ោង▁ដប់▁សាមសិប▁នាទី"),
+  ("25:99", "ម្ភៃប្រាំ:កៅសិបប្រាំបួន"),
+  ("10:234", "ដប់:ពីររយ▁សាមសិបបួន"),
+  # dates
+  ("2024-01-02", "ថ្ងៃទី▁ពីរ▁ខែ▁មករា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃបួន"),
+  ("02/01/2024", "ថ្ងៃទី▁ពីរ▁ខែ▁មករា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃបួន"),
+  ("01/13/2024", "ថ្ងៃទី▁ដប់បី▁ខែ▁មករា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃបួន"),
+  ("2024-13-40", "ពីរពាន់▁ម្ភៃបួន-ដប់បី-សែសិប"),
+  # telephone numbers
+  ("010123123", "សូន្យ▁ដប់▁ដប់ពីរ▁សាមសិបមួយ▁ម្ភៃបី"),
+  ("012-345-678", "សូន្យ▁ដប់ពីរ▁សាមសិបបួន▁ហាសិបប្រាំមួយ▁ចិតសិបប្រាំបី"),
+  (
+    "+855 96 123 4567",
+    "សូន្យ▁កៅសិបប្រាំមួយ▁ដប់ពីរ▁សាមសិបបួន▁ប្រាំរយ▁ហុកសិបប្រាំពីរ",
+  ),
+  # urls and emails
+  ("example@gmail.com", "example▁at▁g▁mail▁dot▁com"),
+  ("john.doe@gmail.com", "john▁dot▁doe▁at▁g▁mail▁dot▁com"),
+  ("https://www.moeys.gov.kh/", "w▁w▁w▁dot▁moeys▁dot▁gov▁dot▁k▁h"),
+  ("visit google.com.", "visit google▁dot▁com."),
+  # license plates
+  ("1A 1234", "មួយ▁អេ▁ដប់ពីរ▁សាមសិបបួន"),
+  ("2AB-4444", "ពីរ▁អេ▁ប៊ី▁ការ៉េ▁បួន"),
+  # whitelist
+  ("ព.ស. ២៥៦៨", "ពុទ្ធសករាជ ពីរពាន់▁ប្រាំរយ▁ហុកសិបប្រាំបី"),
+  # tts/asr: nothing left that a speaker wouldn't say
+  ("I have COVID-19 today", "I have កូវីដ▁ដប់ប្រាំបួន today"),
+  ("MH-17", "អឹម▁អេច▁ដប់ប្រាំពីរ"),
+  ("5-star", "ប្រាំ▁star"),
+  ("A & B", "A និង B"),
+  ("5&6", "ប្រាំនិងប្រាំមួយ"),
+  ("a+b=c", "aបូកbស្មើc"),
+  ("price in $", "price in ដុល្លារ"),
+  ("a+b@gmail.com", "a▁បូក▁b▁at▁g▁mail▁dot▁com"),
+  ("៤ ៥០០៛", "បួនពាន់▁ប្រាំរយ▁រៀល"),
+  ("១ ០០០ ០០០ ដុល្លារ", "មួយលាន ដុល្លារ"),
+  ("1 2 3", "មួយ ពីរ បី"),
+  ("២,៥%", "ពីរ▁ក្បៀស▁ប្រាំ▁ភាគរយ"),
+  ("1,500%", "មួយពាន់▁ប្រាំរយ▁ភាគរយ"),
+  ("2,50€", "ពីរ▁ក្បៀស▁ហាសិប▁អឺរ៉ូ"),
+  ("កាលពីថ្ងៃទី ០៣/០៤/២០២១", "កាលពីថ្ងៃទី▁បី▁ខែ▁មេសា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃមួយ"),
+  ("ថ្ងៃច័ន្ទ ០៣/០៤/២០២១", "ថ្ងៃច័ន្ទ ថ្ងៃទី▁បី▁ខែ▁មេសា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃមួយ"),
+  ("នៅម៉ោង ៨:៣០ ព្រឹក", "នៅម៉ោង▁ប្រាំបី▁សាមសិប▁នាទី ព្រឹក"),
+  # ranges
+  ("2-3 ថ្ងៃ", "ពីរ▁ដល់▁បី ថ្ងៃ"),
+  ("5 - 10", "ប្រាំ ដល់ ដប់"),
+  ("2020–2021", "ពីរពាន់▁ម្ភៃ▁ដល់▁ពីរពាន់▁ម្ភៃមួយ"),
+  ("8:00-17:00", "ម៉ោង▁ប្រាំបី▁ដល់▁ម៉ោង▁ដប់ប្រាំពីរ"),
+  ("5-10%", "ប្រាំ▁ដល់▁ដប់▁ភាគរយ"),
+  ("$5-$10", "ប្រាំ▁ដុល្លារ▁ដល់▁ដប់▁ដុល្លារ"),
+  # money with scale words
+  ("$5 លាន", "ប្រាំ▁លាន▁ដុល្លារ"),
+  ("$1.5M", "មួយ▁ចុច▁ប្រាំ▁លាន▁ដុល្លារ"),
+  ("10K$", "ដប់▁ពាន់▁ដុល្លារ"),
+  ("$5 Million", "ប្រាំ▁ដុល្លារ Million"),
+  # fractions
+  ("1/2", "មួយ▁ភាគ▁ពីរ"),
+  ("¾", "បី▁ភាគ▁បួន"),
+  ("1½", "មួយ▁និង▁មួយ▁ភាគ▁ពីរ"),
+  ("1/0", "មួយ/សូន្យ"),
+  # 8h30, number signs, roman numerals
+  ("8h30", "ម៉ោង▁ប្រាំបី▁សាមសិប▁នាទី"),
+  ("#5", "លេខ▁ប្រាំ"),
+  ("No. 12", "លេខ▁ដប់ពីរ"),
+  ("№5", "លេខ▁ប្រាំ"),
+  ("អគារលេខ#190", "អគារលេខ▁មួយរយ▁កៅសិប"),
+  ("ជ័យវរ្ម័នទី VII", "ជ័យវរ្ម័នទី▁ប្រាំពីរ"),
+  ("ជំពូក II", "ជំពូក▁ពីរ"),
+  ("I am here", "I am here"),
+  ("ទី Mall", "ទី Mall"),
+  # more units, phone formats
+  ("220V", "ពីររយ▁ម្ភៃ▁វ៉ុល"),
+  ("2.4GHz", "ពីរ▁ចុច▁បួន▁ជីហ្គាហឺត"),
+  ("5 គ.ម", "ប្រាំ▁គីឡូម៉ែត្រ"),
+  ("5 A", "ប្រាំ A"),
+  ("(023) 123 456", "សូន្យ▁ម្ភៃបី▁ដប់ពីរ▁សាមសិបបួន▁ហាសិបប្រាំមួយ"),
+  # dots as thousands separators
+  ("១.០០០ដុល្លារ", "មួយពាន់ដុល្លារ"),
+  ("៥០០.០០០នាក់", "ប្រាំសែននាក់"),
+  ("$1.000.000", "មួយលាន▁ដុល្លារ"),
+  ("1.000៛", "មួយពាន់▁រៀល"),
+  ("1.000,50", "មួយពាន់▁ក្បៀស▁ហាសិប"),
+  ("២.១៦៦លាន", "ពីរ▁ចុច▁មួយរយ▁ហុកសិបប្រាំមួយលាន"),
+  # zero padded two digit numbers
+  ("ថ្ងៃទី០៩", "ថ្ងៃទីប្រាំបួន"),
+  ("០៥ថ្ងៃ", "ប្រាំថ្ងៃ"),
+  ("00", "សូន្យ▁សូន្យ"),
+  # scores in sports lines, ranges otherwise
+  ("ឈ្នះ ១-០", "ឈ្នះ មួយ▁ទល់▁សូន្យ"),
+  ("France 0-0 Uruguay", "France សូន្យ▁ទល់▁សូន្យ Uruguay"),
+  ("ការប្រកួតចាប់ពីថ្ងៃទី ៥-៧ ខែសីហា", "ការប្រកួតចាប់ពីថ្ងៃទី ប្រាំ▁ដល់▁ប្រាំពីរ ខែសីហា"),
+  ("២-៣ខែ", "ពីរ▁ដល់▁បីខែ"),
+  # formations, year ranges
+  ("ក្រុម ៤-៤-២", "ក្រុម បួន▁បួន▁ពីរ"),
+  ("4-2-3-1", "បួន▁ពីរ▁បី▁មួយ"),
+  ("៣-២-១", "បី-ពីរ-មួយ"),
+  ("រដូវកាល 2022/23", "រដូវកាល ពីរពាន់▁ម្ភៃពីរ▁ដល់▁ពីរពាន់▁ម្ភៃបី"),
+  ("2022/2023", "ពីរពាន់▁ម្ភៃពីរ▁ដល់▁ពីរពាន់▁ម្ភៃបី"),
+  # codes: spelled latin letters + a number
+  ("U19", "យូ▁ដប់ប្រាំបួន"),
+  ("U-23", "យូ▁ម្ភៃបី"),
+  ("G20", "ជី▁ម្ភៃ"),
+  ("5G", "ប្រាំ▁ជី"),
+  ("MH370", "អឹម▁អេច▁បីរយ▁ចិតសិប"),
+  ("5V", "ប្រាំ▁វ៉ុល"),
+  ("10K$", "ដប់▁ពាន់▁ដុល្លារ"),
+  # hyphens after khmer words, sizes
+  ("កូវីដ-១៩", "កូវីដ▁ដប់ប្រាំបួន"),
+  ("១-ដំណាក់", "មួយ▁ដំណាក់"),
+  ("5x20 ម៉ែត្រ", "ប្រាំ▁គុណ▁ម្ភៃ ម៉ែត្រ"),
+  ("4 x 6", "បួន គុណ ប្រាំមួយ"),
+  # the repetition mark (khmercut) and ៘, which is left as is
+  ("ក្មេងៗ លេង", "ក្មេង▁ក្មេង លេង"),
+  ("សហគមន៍ថ្មីៗ២-៣ទៀត", "សហគមន៍ថ្មី▁ថ្មីពីរ▁ដល់▁បីទៀត"),
+  ("គាត់បានទៅបន្តិចម្ដងៗហើយ", "គាត់បានទៅបន្តិចម្ដង▁បន្តិចម្ដងហើយ"),
+  ("រៀងរាល់ថ្ងៃ ម្ដងៗ", "រៀងរាល់ថ្ងៃ ម្ដង▁ម្ដង"),
+  ("បន្តិចម្តងៗ", "បន្តិចម្តង▁បន្តិចម្តង"),
+  ("ម្នាក់ម្តងៗ", "ម្នាក់ម្តង▁ម្នាក់ម្តង"),
+  ("ផ្លែឈើ ចេក ក្រូច ៘", "ផ្លែឈើ ចេក ក្រូច ៘"),
+  ("៘", "៘"),
+  # sentences, escaping
+  ("ឆ្នាំ២០២៤ តម្លៃ $5", "ឆ្នាំពីរពាន់▁ម្ភៃបួន តម្លៃ ប្រាំ▁ដុល្លារ"),
+  ('say "hi" \\ [5]', 'say "hi" \\ [ប្រាំ]'),
+  ("a\nb 1", "a\nb មួយ"),
+  ("", ""),
+]
+
+for text, expected in CASES:
+  actual = normalizer.normalize(text)
+  assert actual == expected, f"{text!r}: {actual!r} != {expected!r}"
+
+assert tha.normalize_text("5") == "ប្រាំ"
+assert tha.Normalizer(separator=" ").normalize("$1.05, MH-17") == (
+  "មួយ ដុល្លារ ប្រាំ សេន, អឹម អេច ដប់ប្រាំពីរ"
+)
+assert tha.Normalizer(separator="").normalize("1234") == "មួយពាន់ពីររយសាមសិបបួន"
+
+assert tha.Normalizer(word_tokenizer=False).normalize("ក្មេងៗ") == "ក្មេងៗ"
+assert tha.Normalizer(separator=" ").normalize("ក្មេងៗ") == "ក្មេង ក្មេង"
+plain = tha.Normalizer(dot_thousands=False, scores=False)
+assert plain.normalize("123.324") == "មួយរយ▁ម្ភៃបី▁ចុច▁បីរយ▁ម្ភៃបួន"
+assert plain.normalize("ឈ្នះ ១-០") == "ឈ្នះ មួយ▁ដល់▁សូន្យ"
+assert normalizer.tag("$1.05") == (
+  'tokens { money { integer_part: "មួយ" currency_maj: "ដុល្លារ" '
+  'fractional_part: "ប្រាំ" currency_min: "សេន" } }'
+)
+
+## Inverse text normalization (WFST)
+inverse = tha.InverseNormalizer()
+
+ITN_CASES = [
+  # cardinals: glued, joined with ▁ or spaced out, colloquial forms
+  ("មួយពាន់ពីររយសាមសិបបួន", "1234"),
+  ("មួយពាន់▁ពីររយ▁សាមសិបបួន", "1234"),
+  ("មួយពាន់\u200bពីររយ\u200bសាមសិបបួន", "1234"),
+  # a space is a phrase boundary, not a joiner
+  ("ពីររយ ហាសិប", "200 50"),
+  ("ដប់", "10"),
+  ("មួយម៉ឺន▁មួយរយ", "10,100"),
+  ("ពីរប៊ីលាន", "2,000,000,000"),
+  ("មួយពាន់លាន", "1,000,000,000"),
+  ("ដប់ពាន់", "10,000"),
+  ("ម្ភៃប្រាំពាន់", "25,000"),
+  ("ដប់ម៉ឺន", "100,000"),
+  ("សាមប្រាំ", "35"),
+  # the spelling that follows the pronunciation of 7
+  ("ដប់ប្រាំពិល", "17"),
+  ("សូន្យ▁សូន្យ▁ប្រាំពីរ", "007"),
+  # ដក before a number is a minus sign, subtraction stays a word
+  ("ដកដប់", "-10"),
+  ("ដក▁ប្រាំ", "-5"),
+  ("សីតុណ្ហភាពដកដប់អង្សាសេ", "សីតុណ្ហភាព-10°C"),
+  ("ដកប្រាំចុចប្រាំ", "-5.5"),
+  ("ដកប្រាំដុល្លារ", "-$5"),
+  ("ម្ភៃដកដប់", "20 - 10"),
+  ("ពីរបូកបីស្មើប្រាំ", "2 + 3 = 5"),
+  ("ដប់គុណពីរ", "10 × 2"),
+  ("ចែករំលែក", "ចែករំលែក"),
+  ("ដកហូតតំណែង", "ដកហូតតំណែង"),
+  # single digits stay words, except after ទី / លេខ
+  ("មួយចំនួន", "មួយចំនួន"),
+  ("ប្រាំនាក់", "ប្រាំនាក់"),
+  ("ដប់ប្រាំនាក់", "15នាក់"),
+  ("ទីបី", "ទី3"),
+  ("លេខ▁ប្រាំ", "លេខ5"),
+  ("ថ្ងៃទីប្រាំបួន", "ថ្ងៃទី9"),
+  ("ឆ្នាំពីរពាន់▁ម្ភៃបួន", "ឆ្នាំ2024"),
+  # number words inside other words
+  ("បទនេះពីរោះណាស់", "បទនេះពីរោះណាស់"),
+  ("រយៈពេលពីរឆ្នាំ", "រយៈពេលពីរឆ្នាំ"),
+  # decimals
+  ("ដប់ពីរ▁ចុច▁ប្រាំ", "12.5"),
+  ("សូន្យ▁ចុច▁សូន្យ▁សូន្យ▁មួយ", "0.001"),
+  ("មួយ▁ក្បៀស▁ប្រាំ", "1,5"),
+  ("ប្រាំចុចប្រាំលាន", "5.5លាន"),
+  # money
+  ("មួយរយ▁ដុល្លារ", "$100"),
+  ("មួយ▁ដុល្លារ▁ប្រាំ▁សេន", "$1.05"),
+  ("ហាសិប▁សេន", "$0.50"),
+  ("មួយរយ▁រៀល", "100៛"),
+  ("ហាសិប▁អឺរ៉ូ", "€50"),
+  ("ប្រាំលានដុល្លារ", "$5,000,000"),
+  ("មួយ▁ចុច▁ប្រាំ▁លាន▁ដុល្លារ", "$1.5 លាន"),
+  # measures
+  ("ហាសិប▁ភាគរយ", "50%"),
+  ("ដប់ពីរ▁ចុច▁ប្រាំ▁ភាគរយ", "12.5%"),
+  ("ប្រាំ▁គីឡូម៉ែត្រ", "5 km"),
+  ("ដប់▁គីឡូម៉ែត្រក្នុងមួយម៉ោង", "10 km/h"),
+  ("ម្ភៃ▁អង្សាសេ", "20°C"),
+  ("ប្រាំ▁ដល់▁ដប់▁ភាគរយ", "5-10%"),
+  # time
+  ("ម៉ោង▁ដប់", "10:00"),
+  ("ម៉ោង▁ដប់▁ម្ភៃបី▁នាទី", "10:23"),
+  ("ម៉ោង▁ដប់▁ម្ភៃបី▁នាទី▁សែសិបប្រាំ▁វិនាទី", "10:23:45"),
+  ("ម៉ោង▁ប្រាំបួន▁ប្រាំ▁នាទី▁យប់", "9:05 យប់"),
+  ("នៅម៉ោងប្រាំបីកន្លះ ព្រឹក", "នៅ8:30 ព្រឹក"),
+  ("នៅម៉ោងប្រាំបីសាមសិប", "នៅ8:30"),
+  ("នៅម៉ោងប្រាំបីនិងសាមសិបនាទី", "នៅ8:30"),
+  ("ម៉ោងដប់ពីរ", "12:00"),
+  ("ម៉ោងប្រាំបួនប្រាំពីរវិនាទី", "9:00:07"),
+  # dates
+  ("ថ្ងៃទី▁ពីរ▁ខែ▁មករា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃបួន", "02/01/2024"),
+  ("ថ្ងៃទីដប់បី ខែមករា ឆ្នាំពីរពាន់ម្ភៃបួន", "13/01/2024"),
+  ("ថ្ងៃទីដប់បីខែមករាឆ្នាំពីរពាន់ម្ភៃបួន", "13/01/2024"),
+  ("ថ្ងៃទីពីរ ខែមករា", "ថ្ងៃទី2 ខែមករា"),
+  # telephone numbers, e-mails, urls, license plates
+  ("សូន្យ▁ដប់ពីរ▁សាមសិបបួន▁ហាសិបប្រាំមួយ▁ចិតសិបប្រាំបី", "012 345 678"),
+  (
+    "សូន្យ▁កៅសិបប្រាំមួយ▁ដប់ពីរ▁សាមសិបបួន▁ប្រាំរយ▁ហុកសិបប្រាំពីរ",
+    "096 123 4567",
+  ),
+  ("john▁dot▁doe▁at▁g▁mail▁dot▁com", "john.doe@gmail.com"),
+  ("john dot doe at gmail dot com", "john.doe@gmail.com"),
+  ("john dot doe at g mail dot com", "john.doe@gmail.com"),
+  ("w▁w▁w▁dot▁moeys▁dot▁gov▁dot▁k▁h", "www.moeys.gov.kh"),
+  ("ពីរ▁អេ▁ប៊ី▁ការ៉េ▁បួន", "2AB-4444"),
+  ("មួយ▁អេ▁ដប់ពីរ▁សាមសិបបួន", "1A-1234"),
+  # fractions, serials, ranges and scores
+  ("បី▁ភាគ▁បួន", "3/4"),
+  ("មួយ▁និង▁មួយ▁ភាគ▁ពីរ", "1 1/2"),
+  ("មួយរយកៅសិបពីរ▁ចុច▁មួយរយហុកសិបប្រាំបី▁ចុច▁សូន្យ▁ចុច▁មួយ", "192.168.0.1"),
+  ("ពីរ▁ដល់▁បី ថ្ងៃ", "2-3 ថ្ងៃ"),
+  ("ឈ្នះ មួយ▁ទល់▁សូន្យ", "ឈ្នះ 1-0"),
+  ("France សូន្យ▁ទល់▁សូន្យ Uruguay", "France 0-0 Uruguay"),
+  # the repetition mark
+  ("ក្មេង▁ក្មេង លេង", "ក្មេងៗ លេង"),
+  # sentences, escaping
+  (
+    "ទិញនៅ ថ្ងៃទី▁ពីរ▁ខែ▁មករា▁ឆ្នាំ▁ពីរពាន់▁ម្ភៃបួន តម្លៃ មួយ▁ដុល្លារ▁ប្រាំ▁សេន",
+    "ទិញនៅ 02/01/2024 តម្លៃ $1.05",
+  ),
+  ("ប្រជាជនប្រហែលដប់ប្រាំពីរលាននាក់", "ប្រជាជនប្រហែល17,000,000នាក់"),
+  ('say "ដប់" \\ [ដប់]', 'say "10" \\ [10]'),
+  ("a\nb ដប់", "a\nb 10"),
+  ("", ""),
+]
+
+for text, expected in ITN_CASES:
+  actual = inverse.inverse_normalize(text)
+  assert actual == expected, f"{text!r}: {actual!r} != {expected!r}"
+
+assert tha.inverse_normalize_text("ដប់") == "10"
+assert (
+  tha.InverseNormalizer(thousands_sep="", khmer_digits=True).inverse_normalize(
+    "ដប់ពាន់ដុល្លារ ថ្ងៃទីប្រាំ"
+  )
+  == "$១០០០០ ថ្ងៃទី៥"
+)
+assert inverse.tag("មួយ▁ដុល្លារ▁ប្រាំ▁សេន") == (
+  'tokens { money { currency: "$" integer_part: "1" fractional_part: "05" } }'
+)
+# the normalizer's output reads back as its input
+for text in [
+  "$1.05",
+  "10:23",
+  "02/01/2024",
+  "012 345 678",
+  "john.doe@gmail.com",
+  "-10°C",
+]:
+  assert inverse.inverse_normalize(normalizer.normalize(text)) == text, text
+
 ## Normalize
-assert tha.normalize.processor("មិន\u200bឲ្យ") == "មិនឱ្យ"
-
-## Phone Numbers
-assert tha.phone_numbers.processor("010123123", chunk_size=2) == "0▁10▁12▁31▁23"
-assert tha.phone_numbers.processor("010123123", chunk_size=3) == "0▁10▁123▁123"
-assert tha.phone_numbers.processor("0961231234", chunk_size=3) == "0▁96▁123▁1234"
-
-## URLs and emails
-assert tha.urls.processor("example@gmail.com") == "example at g▁mail dot com"
-assert tha.urls.processor("https://google.com") == "google dot com"
-assert tha.urls.processor("http://google.com") == "google dot com"
-assert tha.urls.processor("google.com") == "google dot com"
-assert tha.urls.processor("google.gov.kh") == "google dot gov dot k▁h"
-assert tha.urls.processor("google.com.kh") == "google dot com dot k▁h"
-
-## Time
-assert tha.datetime.time_processor("10:23AM") == "10 23▁A▁M"
-assert tha.datetime.time_processor("10:23PM") == "10 23▁P▁M"
-assert tha.datetime.time_processor("1:23PM") == "1 23▁P▁M"
-
-## Date
-assert tha.datetime.date_processor("2024-01-02") == "2024 01 02"
-assert tha.datetime.date_processor("01-02-2034") == "01 02 2034"
+assert tha.normalize.processor("មិន​ឲ្យ") == "មិនឱ្យ"
+# coeng DA and coeng TA are pronounced differently, they are never merged
+assert tha.normalize.processor("ក្ដារ") == "ក្ដារ"
+assert tha.normalize.processor("ក្តារ") == "ក្តារ"
 
 ## Hashtags
 assert (
@@ -50,51 +381,10 @@ assert tha.hashtags.processor("Hello world #លុប1234 hello") == "Hello worl
 assert tha.ascii_lines.processor("Remove --- asdasd") == "Remove  asdasd"
 assert tha.ascii_lines.processor("Remove\n###\nasdasd") == "Remove\n\nasdasd"
 
-## Cambodia License Plate
-assert tha.license_plate.processor("1A 1234") == "1 A 12▁34"
-assert tha.license_plate.processor("1A 4444") == "1 A ការ៉េ4"
-
-## Number - Cardinals
-assert tha.cardinals.processor("1234") == "មួយពាន់▁ពីររយ▁សាមសិបបួន"
-assert tha.cardinals.processor("1") == "មួយ"
-assert tha.cardinals.processor("1▁2") == "មួយ▁ពីរ"
-assert tha.cardinals.processor("-1") == "ដក▁មួយ"
-assert tha.cardinals.processor("10") == "ដប់"
-assert tha.cardinals.processor("15") == "ដប់ប្រាំ"
-assert tha.cardinals.processor("100") == "មួយរយ"
-assert tha.cardinals.processor("10000") == "មួយម៉ឺន"
-assert tha.cardinals.processor("10000.234") == "មួយម៉ឺន.ពីររយ▁សាមសិបបួន"
-assert tha.cardinals.processor("-10000.234") == "ដក▁មួយម៉ឺន.ពីររយ▁សាមសិបបួន"
-assert tha.cardinals.processor("-10000,234") == "ដក▁មួយម៉ឺន,ពីររយ▁សាមសិបបួន"
-
-## Number - Decimals
-assert tha.decimals.processor("123.324") == "មួយរយ▁ម្ភៃបី▁ចុច▁បីរយ▁ម្ភៃបួន"
-assert tha.decimals.processor("123.001") == "មួយរយ▁ម្ភៃបី▁ចុច▁សូន្យ▁សូន្យ▁មួយ"
-assert tha.decimals.processor("-123.0012") == "ដក▁មួយរយ▁ម្ភៃបី▁ចុច▁សូន្យ▁សូន្យ▁ដប់ពីរ"
-assert tha.decimals.processor("-123,0012") == "ដក▁មួយរយ▁ម្ភៃបី▁ក្បៀស▁សូន្យ▁សូន្យ▁ដប់ពីរ"
-assert (
-  tha.decimals.processor("hello, world -123,0012")
-  == "hello, world ដក▁មួយរយ▁ម្ភៃបី▁ក្បៀស▁សូន្យ▁សូន្យ▁ដប់ពីរ"
-)
-
-## Number - Ordinals
-assert tha.ordinals.processor("5th") == "ទី▁ប្រាំ"
-assert tha.ordinals.processor("3rd") == "ទី▁បី"
-assert tha.ordinals.processor("1st") == "ទី▁មួយ"
-assert tha.ordinals.processor("10th") == "ទី▁ដប់"
-assert tha.ordinals.processor("10") == "10"
-
-## Number - Currency
-assert tha.currency.processor("$100.01") == "មួយរយដុល្លារ▁មួយសេន"
-assert tha.currency.processor("$100") == "មួយរយ▁ដុល្លារ"
-assert tha.currency.processor("100$") == "មួយរយ▁ដុល្លារ"
-assert tha.currency.processor("100៛") == "មួយរយ▁រៀល"
-assert tha.currency.processor("100.32៛") == "មួយរយចុចសាមសិបពីរ▁រៀល"
-assert tha.currency.processor("100.0032៛") == "មួយរយចុចសាមសិបពីរ▁រៀល"
-assert tha.currency.processor("asdasdas.asdas,d 100.0032៛") == "asdasdas.asdas,d មួយរយចុចសាមសិបពីរ▁រៀល"
-
 ## Parenthesis
 assert tha.parenthesis.processor("Hello (this will be ignored) world") == "Hello world"
+assert tha.parenthesis.processor("a (b (c)) d") == "a d"
+assert tha.parenthesis.processor("(note) hello [x]") == "hello"
 
 
 ## Iteration Mark
@@ -106,6 +396,7 @@ assert (
   tha.repeater.processor("គាត់បានទៅបន្តិចម្ដងៗហើយ", tokenizer=fake_tokenizer)
   == "គាត់បានទៅបន្តិចម្ដង▁បន្តិចម្ដងហើយ"
 )
+assert tha.repeater.processor("ៗហើយ", tokenizer=lambda x: [x]) == "ហើយ"
 
 ## Quotes
 assert tha.quotings.processor('lorem "content" lorem') == "lorem content lorem"

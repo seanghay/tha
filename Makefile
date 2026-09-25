@@ -1,6 +1,13 @@
 build:
-	rm -rf *.egg-info/ dist/ tha/__pycache__
-	python setup.py sdist
+	rm -rf dist/
+	uv build
 
 upload:
-	twine upload dist/*
+	uv publish
+
+test:
+	uv run python tests.py
+
+lint:
+	uv run ruff check tha tests.py
+	uv run ruff format --check tha tests.py
