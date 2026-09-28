@@ -2,6 +2,8 @@
 
 Khmer text normalization: turn written text into spoken words for TTS, and spoken words back into written text for ASR.
 
+Paper: [arXiv:2609.30984](https://arxiv.org/abs/2609.30984)
+
 ## Install
 
 ```shell
@@ -89,9 +91,13 @@ CPPFLAGS="-I$(brew --prefix)/include" LDFLAGS="-L$(brew --prefix)/lib" uv sync
 
 ```bibtex
 @misc{yath2026tha,
-  author = {Yath, Seanghay},
-  title  = {Tha: Weighted Finite-State Text Normalization and Inverse Text Normalization for Khmer},
-  year   = {2026},
-  url    = {https://github.com/seanghay/tha}
+  author        = {Yath, Seanghay},
+  title         = {{THA}: Weighted Finite-State Text Normalization and Inverse Text Normalization for Khmer},
+  year          = {2026},
+  eprint        = {2609.30984},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  doi           = {10.48550/arXiv.2609.30984},
+  url           = {https://arxiv.org/abs/2609.30984}
 }
 ```
